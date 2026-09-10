@@ -1,0 +1,61 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Workspace {
+  id        String     @id @default(uuid())
+  name      String
+  users     User[]
+  feedbacks Feedback[]
+  reports   Report[]
+  createdAt DateTime   @default(now())
+}
+
+model User {
+  id          String    @id @default(uuid())
+  email       String    @unique
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+}
+
+model Feedback {
+  id             String          @id @default(uuid())
+  content        String
+  workspaceId    String
+  workspace      Workspace       @relation(fields: [workspaceId], references: [id])
+  feedbackThemes FeedbackTheme[]
+  embeddings     Embedding[]
+}
+
+model FeedbackTheme {
+  id         String   @id @default(uuid())
+  feedbackId String
+  themeId    String
+  feedback   Feedback @relation(fields: [feedbackId], references: [id])
+  theme      Theme    @relation(fields: [themeId], references: [id])
+}
+
+model Theme {
+  id             String          @id @default(uuid())
+  name           String
+  feedbackThemes FeedbackTheme[]
+}
+
+model Embedding {
+  id         String   @id @default(uuid())
+  vector     String
+  feedbackId String
+  feedback   Feedback @relation(fields: [feedbackId], references: [id])
+}
+
+model Report {
+  id          String    @id @default(uuid())
+  title       String
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+}

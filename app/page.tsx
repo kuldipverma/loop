@@ -1,69 +1,200 @@
-import Image from "next/image";
+'use client'
+
+import { useState, useEffect } from 'react'
+
+interface Feedback {
+  id: string
+  content: string
+}
+
+interface Workspace {
+  id: string
+  name: string
+}
 
 export default function Home() {
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([])
+  const [activeWorkspaceId, setActiveWorkspaceId] = useState<string>('')
+  const [feedbacks, setFeedbacks] = useState<Feedback[]>([])
+  const [content, setContent] = useState('')
+  const [newWsName, setNewWsName] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [errorMsg, setErrorMsg] = useState('')
+
+  // 1. Fetch Workspaces
+  const fetchWorkspaces = async () => {
+    try {
+      const res = await fetch('/api/workspaces')
+      const result = await res.json()
+      if (result.success && result.data.length > 0) {
+        setWorkspaces(result.data)
+        if (!activeWorkspaceId) {
+          setActiveWorkspaceId(result.data[0].id)
+        }
+      }
+    } catch (err) {
+      setErrorMsg('Failed to load workspaces')
+    }
+  }
+
+  // 2. Fetch Feedbacks for Selected Workspace
+  const fetchFeedbacks = async (wsId: string) => {
+    if (!wsId) return
+    try {
+      const res = await fetch('/api/feedback', {
+        headers: { 'x-workspace-id': wsId },
+      })
+      const result = await res.json()
+      if (result.success) {
+        setFeedbacks(result.data)
+      } else {
+        setErrorMsg(result.error || 'Failed to fetch feedbacks')
+      }
+    } catch (err) {
+      setErrorMsg('Fetch error: ' + (err as Error).message)
+    }
+  }
+
+  useEffect(() => {
+    fetchWorkspaces()
+  }, [])
+
+  useEffect(() => {
+    if (activeWorkspaceId) {
+      fetchFeedbacks(activeWorkspaceId)
+    }
+  }, [activeWorkspaceId])
+
+  // Create Workspace
+  const handleCreateWorkspace = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newWsName.trim()) return
+    try {
+      const res = await fetch('/api/workspaces', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newWsName }),
+      })
+      const result = await res.json()
+      if (result.success) {
+        setNewWsName('')
+        fetchWorkspaces()
+        setActiveWorkspaceId(result.data.id)
+      }
+    } catch (err) {
+      setErrorMsg('Failed to create workspace')
+    }
+  }
+
+  // Submit Feedback
+  const handleSubmitFeedback = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!content.trim() || !activeWorkspaceId) return
+
+    setLoading(true)
+    setErrorMsg('')
+    try {
+      const res = await fetch('/api/feedback', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-workspace-id': activeWorkspaceId,
+        },
+        body: JSON.stringify({ content }),
+      })
+      const result = await res.json()
+      if (result.success) {
+        setContent('')
+        fetchFeedbacks(activeWorkspaceId)
+      } else {
+        setErrorMsg('Submit error: ' + (result.error || 'Failed'))
+      }
+    } catch (err) {
+      setErrorMsg('Submit exception: ' + (err as Error).message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main className="max-w-3xl mx-auto p-8 font-sans">
+      <h1 className="text-3xl font-bold mb-6">Multi-Tenant Dashboard</h1>
+
+      {errorMsg && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          <strong>Error: </strong>{errorMsg}
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+      )}
+
+      {/* Workspace Switcher Bar */}
+      <div className="bg-gray-100 p-4 rounded-lg mb-8 space-y-4">
+        <div className="flex items-center justify-between">
+          <label className="font-semibold text-gray-700">Select Active Workspace:</label>
+          <select
+            value={activeWorkspaceId}
+            onChange={(e) => setActiveWorkspaceId(e.target.value)}
+            className="p-2 border rounded-lg bg-white text-black font-medium"
           >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            {workspaces.map((ws) => (
+              <option key={ws.id} value={ws.id}>
+                {ws.name}
+              </option>
+            ))}
+          </select>
         </div>
-      </main>
-    </div>
-  );
+
+        {/* Add New Workspace */}
+        <form onSubmit={handleCreateWorkspace} className="flex gap-2 pt-2 border-t border-gray-300">
+          <input
+            type="text"
+            value={newWsName}
+            onChange={(e) => setNewWsName(e.target.value)}
+            placeholder="New Workspace Name..."
+            className="p-2 border rounded-lg flex-1 text-black"
+          />
+          <button type="submit" className="bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700">
+            + Create Workspace
+          </button>
+        </form>
+      </div>
+
+      {/* Submit Feedback Form */}
+      <form onSubmit={handleSubmitFeedback} className="mb-8 space-y-4">
+        <div>
+          <label className="block text-sm font-medium mb-2">Submit New Feedback</label>
+          <textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-black"
+            rows={3}
+            placeholder="Type your feedback here..."
+            required
+          />
+        </div>
+        <button
+          type="submit"
+          disabled={loading}
+          className="bg-blue-600 text-white px-5 py-2 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50"
+        >
+          {loading ? 'Submitting...' : 'Submit Feedback'}
+        </button>
+      </form>
+
+      {/* Feedback List Section */}
+      <section>
+        <h2 className="text-xl font-semibold mb-4">Submitted Feedbacks</h2>
+        {feedbacks.length === 0 ? (
+          <p className="text-gray-500">No feedbacks found for this workspace.</p>
+        ) : (
+          <div className="space-y-3">
+            {feedbacks.map((item) => (
+              <div key={item.id} className="p-4 border rounded-lg bg-gray-50 text-black">
+                <p>{item.content}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+    </main>
+  )
 }
