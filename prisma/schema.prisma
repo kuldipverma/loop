@@ -1,61 +1,70 @@
-datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
-}
-
 generator client {
   provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model Workspace {
   id        String     @id @default(uuid())
   name      String
+  createdAt DateTime   @default(now())
   users     User[]
   feedbacks Feedback[]
-  reports   Report[]
-  createdAt DateTime   @default(now())
 }
 
 model User {
   id          String    @id @default(uuid())
   email       String    @unique
+  name        String
+  role        Role      @default(VIEWER)
   workspaceId String
   workspace   Workspace @relation(fields: [workspaceId], references: [id])
 }
 
+enum Role {
+  ADMIN
+  ANALYST
+  VIEWER
+}
+
 model Feedback {
-  id             String          @id @default(uuid())
-  content        String
-  workspaceId    String
-  workspace      Workspace       @relation(fields: [workspaceId], references: [id])
-  feedbackThemes FeedbackTheme[]
-  embeddings     Embedding[]
+  id          String          @id @default(uuid())
+  content     String
+  createdAt   DateTime        @default(now())
+  workspaceId String
+  workspace   Workspace       @relation(fields: [workspaceId], references: [id])
+  themes      FeedbackTheme[]
+  embedding   Embedding?
+}
+
+model Theme {
+  id        String          @id @default(uuid())
+  name      String
+  feedbacks FeedbackTheme[]
 }
 
 model FeedbackTheme {
-  id         String   @id @default(uuid())
   feedbackId String
   themeId    String
   feedback   Feedback @relation(fields: [feedbackId], references: [id])
   theme      Theme    @relation(fields: [themeId], references: [id])
-}
 
-model Theme {
-  id             String          @id @default(uuid())
-  name           String
-  feedbackThemes FeedbackTheme[]
+  @@id([feedbackId, themeId])
 }
 
 model Embedding {
   id         String   @id @default(uuid())
   vector     String
-  feedbackId String
+  feedbackId String   @unique
   feedback   Feedback @relation(fields: [feedbackId], references: [id])
 }
 
 model Report {
-  id          String    @id @default(uuid())
-  title       String
-  workspaceId String
-  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  id        String   @id @default(uuid())
+  title     String
+  content   String
+  createdAt DateTime @default(now())
 }
