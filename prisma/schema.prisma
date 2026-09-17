@@ -7,64 +7,39 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id          String   @id @default(uuid())
+  name        String
+  email       String   @unique
+  password    String
+  role        String   @default("MEMBER")
+  createdAt   DateTime @default(now())
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  feedbacks   Feedback[]
+}
+
 model Workspace {
-  id        String     @id @default(uuid())
+  id        String   @id @default(uuid())
   name      String
-  createdAt DateTime   @default(now())
+  slug      String   @unique
+  createdAt DateTime @default(now())
+
   users     User[]
   feedbacks Feedback[]
 }
 
-model User {
-  id          String    @id @default(uuid())
-  email       String    @unique
-  name        String
-  role        Role      @default(VIEWER)
-  workspaceId String
-  workspace   Workspace @relation(fields: [workspaceId], references: [id])
-}
-
-enum Role {
-  ADMIN
-  ANALYST
-  VIEWER
-}
-
 model Feedback {
-  id          String          @id @default(uuid())
-  content     String
-  createdAt   DateTime        @default(now())
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  createdAt   DateTime @default(now())
+
   workspaceId String
-  workspace   Workspace       @relation(fields: [workspaceId], references: [id])
-  themes      FeedbackTheme[]
-  embedding   Embedding?
-}
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-model Theme {
-  id        String          @id @default(uuid())
-  name      String
-  feedbacks FeedbackTheme[]
-}
-
-model FeedbackTheme {
-  feedbackId String
-  themeId    String
-  feedback   Feedback @relation(fields: [feedbackId], references: [id])
-  theme      Theme    @relation(fields: [themeId], references: [id])
-
-  @@id([feedbackId, themeId])
-}
-
-model Embedding {
-  id         String   @id @default(uuid())
-  vector     String
-  feedbackId String   @unique
-  feedback   Feedback @relation(fields: [feedbackId], references: [id])
-}
-
-model Report {
-  id        String   @id @default(uuid())
-  title     String
-  content   String
-  createdAt DateTime @default(now())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
