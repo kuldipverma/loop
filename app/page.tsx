@@ -1,200 +1,47 @@
-'use client'
+import { db } from "@/lib/db";
+import Link from "next/link";
 
-import { useState, useEffect } from 'react'
-
-interface Feedback {
-  id: string
-  content: string
-}
-
-interface Workspace {
-  id: string
-  name: string
-}
-
-export default function Home() {
-  const [workspaces, setWorkspaces] = useState<Workspace[]>([])
-  const [activeWorkspaceId, setActiveWorkspaceId] = useState<string>('')
-  const [feedbacks, setFeedbacks] = useState<Feedback[]>([])
-  const [content, setContent] = useState('')
-  const [newWsName, setNewWsName] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [errorMsg, setErrorMsg] = useState('')
-
-  // 1. Fetch Workspaces
-  const fetchWorkspaces = async () => {
-    try {
-      const res = await fetch('/api/workspaces')
-      const result = await res.json()
-      if (result.success && result.data.length > 0) {
-        setWorkspaces(result.data)
-        if (!activeWorkspaceId) {
-          setActiveWorkspaceId(result.data[0].id)
-        }
-      }
-    } catch (err) {
-      setErrorMsg('Failed to load workspaces')
-    }
-  }
-
-  // 2. Fetch Feedbacks for Selected Workspace
-  const fetchFeedbacks = async (wsId: string) => {
-    if (!wsId) return
-    try {
-      const res = await fetch('/api/feedback', {
-        headers: { 'x-workspace-id': wsId },
-      })
-      const result = await res.json()
-      if (result.success) {
-        setFeedbacks(result.data)
-      } else {
-        setErrorMsg(result.error || 'Failed to fetch feedbacks')
-      }
-    } catch (err) {
-      setErrorMsg('Fetch error: ' + (err as Error).message)
-    }
-  }
-
-  useEffect(() => {
-    fetchWorkspaces()
-  }, [])
-
-  useEffect(() => {
-    if (activeWorkspaceId) {
-      fetchFeedbacks(activeWorkspaceId)
-    }
-  }, [activeWorkspaceId])
-
-  // Create Workspace
-  const handleCreateWorkspace = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!newWsName.trim()) return
-    try {
-      const res = await fetch('/api/workspaces', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newWsName }),
-      })
-      const result = await res.json()
-      if (result.success) {
-        setNewWsName('')
-        fetchWorkspaces()
-        setActiveWorkspaceId(result.data.id)
-      }
-    } catch (err) {
-      setErrorMsg('Failed to create workspace')
-    }
-  }
-
-  // Submit Feedback
-  const handleSubmitFeedback = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!content.trim() || !activeWorkspaceId) return
-
-    setLoading(true)
-    setErrorMsg('')
-    try {
-      const res = await fetch('/api/feedback', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-workspace-id': activeWorkspaceId,
-        },
-        body: JSON.stringify({ content }),
-      })
-      const result = await res.json()
-      if (result.success) {
-        setContent('')
-        fetchFeedbacks(activeWorkspaceId)
-      } else {
-        setErrorMsg('Submit error: ' + (result.error || 'Failed'))
-      }
-    } catch (err) {
-      setErrorMsg('Submit exception: ' + (err as Error).message)
-    } finally {
-      setLoading(false)
-    }
-  }
+export default async function HomePage() {
+  const workspaces = await db.workspace.findMany({
+    orderBy: { createdAt: "desc" },
+  });
 
   return (
-    <main className="max-w-3xl mx-auto p-8 font-sans">
-      <h1 className="text-3xl font-bold mb-6">Multi-Tenant Dashboard</h1>
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 font-sans">
+      <div className="max-w-md w-full bg-white rounded-2xl shadow-lg border border-slate-200 p-8 text-center">
+        <h1 className="text-2xl font-bold text-slate-800 mb-2">Select Active Workspace</h1>
+        <p className="text-sm text-slate-500 mb-6">Choose a workspace to access its dashboard</p>
 
-      {errorMsg && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          <strong>Error: </strong>{errorMsg}
-        </div>
-      )}
-
-      {/* Workspace Switcher Bar */}
-      <div className="bg-gray-100 p-4 rounded-lg mb-8 space-y-4">
-        <div className="flex items-center justify-between">
-          <label className="font-semibold text-gray-700">Select Active Workspace:</label>
-          <select
-            value={activeWorkspaceId}
-            onChange={(e) => setActiveWorkspaceId(e.target.value)}
-            className="p-2 border rounded-lg bg-white text-black font-medium"
-          >
-            {workspaces.map((ws) => (
-              <option key={ws.id} value={ws.id}>
-                {ws.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Add New Workspace */}
-        <form onSubmit={handleCreateWorkspace} className="flex gap-2 pt-2 border-t border-gray-300">
-          <input
-            type="text"
-            value={newWsName}
-            onChange={(e) => setNewWsName(e.target.value)}
-            placeholder="New Workspace Name..."
-            className="p-2 border rounded-lg flex-1 text-black"
-          />
-          <button type="submit" className="bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700">
-            + Create Workspace
-          </button>
-        </form>
-      </div>
-
-      {/* Submit Feedback Form */}
-      <form onSubmit={handleSubmitFeedback} className="mb-8 space-y-4">
-        <div>
-          <label className="block text-sm font-medium mb-2">Submit New Feedback</label>
-          <textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-black"
-            rows={3}
-            placeholder="Type your feedback here..."
-            required
-          />
-        </div>
-        <button
-          type="submit"
-          disabled={loading}
-          className="bg-blue-600 text-white px-5 py-2 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50"
-        >
-          {loading ? 'Submitting...' : 'Submit Feedback'}
-        </button>
-      </form>
-
-      {/* Feedback List Section */}
-      <section>
-        <h2 className="text-xl font-semibold mb-4">Submitted Feedbacks</h2>
-        {feedbacks.length === 0 ? (
-          <p className="text-gray-500">No feedbacks found for this workspace.</p>
-        ) : (
-          <div className="space-y-3">
-            {feedbacks.map((item) => (
-              <div key={item.id} className="p-4 border rounded-lg bg-gray-50 text-black">
-                <p>{item.content}</p>
+        <div className="space-y-3">
+          {workspaces.map((ws) => (
+            <Link
+              key={ws.id}
+              href={`/${ws.slug}`}
+              className="flex items-center justify-between p-4 bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 rounded-xl transition duration-150 group cursor-pointer"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-indigo-600 text-white font-bold flex items-center justify-center shadow-sm">
+                  {ws.name.charAt(0).toUpperCase()}
+                </div>
+                <div className="text-left">
+                  <p className="font-semibold text-slate-800 group-hover:text-indigo-600 transition">{ws.name}</p>
+                  <p className="text-xs text-slate-400 font-mono">/{ws.slug}</p>
+                </div>
               </div>
-            ))}
-          </div>
-        )}
-      </section>
-    </main>
-  )
+              <span className="text-indigo-600 font-bold group-hover:translate-x-1 transition">→</span>
+            </Link>
+          ))}
+        </div>
+
+        <div className="mt-8 pt-6 border-t border-slate-100">
+          <Link
+            href="/signup"
+            className="inline-block text-sm font-semibold text-indigo-600 hover:text-indigo-700"
+          >
+            + Create New Workspace
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
 }

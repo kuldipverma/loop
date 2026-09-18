@@ -4,7 +4,7 @@ import { getSessionUserId } from "@/lib/auth";
 import { logoutAction } from "@/app/actions/auth";
 import { createFeedbackAction } from "@/app/actions/feedback";
 
-export default async function WorkspaceDashboard({
+export default async function WorkspacePage({
   params,
 }: {
   params: Promise<{ slug: string }>;
@@ -16,14 +16,12 @@ export default async function WorkspaceDashboard({
     redirect("/signup");
   }
 
-  const workspace = await db.workspace.findUnique({
+  const workspace = await db.workspace.findFirst({
     where: { slug },
     include: {
-      users: {
-        select: { id: true, name: true, email: true, role: true },
-      },
+      users: true,
       feedbacks: {
-        include: { createdBy: { select: { name: true } } },
+        include: { user: { select: { name: true } } },
         orderBy: { createdAt: "desc" },
       },
     },
@@ -34,125 +32,129 @@ export default async function WorkspaceDashboard({
   }
 
   return (
-    <div style={{ padding: "40px", fontFamily: "sans-serif", maxWidth: "800px", margin: "0 auto" }}>
-      {/* Header Section */}
-      <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "2px solid #eaeaea", paddingBottom: "15px", marginBottom: "25px" }}>
-        <div>
-          <h1 style={{ margin: 0 }}>🏢 {workspace.name}</h1>
-          <p style={{ color: "#666", margin: "5px 0 0 0" }}>
-            Workspace Slug: <code>{workspace.slug}</code>
-          </p>
+    <div style={{ minHeight: "100vh", backgroundColor: "#f8fafc", padding: "32px", fontFamily: "sans-serif" }}>
+      <div style={{ maxWidth: "800px", margin: "0 auto" }}>
+        
+        {/* Header */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: "#fff", padding: "20px 24px", borderRadius: "12px", border: "1px solid #e2e8f0", marginBottom: "24px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <div style={{ width: "48px", height: "48px", borderRadius: "10px", backgroundColor: "#2563eb", color: "#fff", fontWeight: "bold", fontSize: "20px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              {workspace.name.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <h1 style={{ margin: 0, fontSize: "20px", fontWeight: "bold", color: "#0f172a" }}>{workspace.name}</h1>
+              <p style={{ margin: 0, fontSize: "13px", color: "#64748b" }}>slug: <span style={{ color: "#2563eb" }}>{workspace.slug}</span></p>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+            <span style={{ fontSize: "12px", backgroundColor: "#dbeafe", color: "#1e40af", padding: "6px 12px", borderRadius: "20px", fontWeight: "600" }}>Your Role: ADMIN</span>
+            <form action={logoutAction}>
+              <button type="submit" style={{ backgroundColor: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca", padding: "8px 16px", borderRadius: "8px", cursor: "pointer", fontWeight: "600" }}>
+                Logout
+              </button>
+            </form>
+          </div>
         </div>
 
-        <form action={logoutAction}>
-          <button
-            type="submit"
-            style={{
-              background: "#ff4d4f",
-              color: "#fff",
-              border: "none",
-              padding: "8px 16px",
-              borderRadius: "5px",
-              cursor: "pointer",
-              fontWeight: "bold"
-            }}
-          >
-            Logout
-          </button>
-        </form>
-      </header>
+        {/* Create Feedback Form */}
+        <div style={{ backgroundColor: "#fff", padding: "24px", borderRadius: "12px", border: "1px solid #e2e8f0", marginBottom: "24px" }}>
+          <h2 style={{ fontSize: "18px", fontWeight: "bold", color: "#0f172a", marginTop: 0, marginBottom: "16px" }}>💬 Create Feedback</h2>
+          <form action={createFeedbackAction} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            <input type="hidden" name="workspaceId" value={workspace.id} />
+            <input type="hidden" name="slug" value={workspace.slug} />
 
-      {/* Day 5: Add Feedback Form */}
-      <section style={{ background: "#f9f9f9", padding: "20px", borderRadius: "8px", marginBottom: "30px", border: "1px solid #ddd" }}>
-        <h2 style={{ marginTop: 0 }}>Add Feedback</h2>
-        <form action={createFeedbackAction} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-          <input type="hidden" name="workspaceId" value={workspace.id} />
-          <input type="hidden" name="slug" value={workspace.slug} />
-
-          <div>
-            <label style={{ display: "block", marginBottom: "4px", fontWeight: "bold" }}>Content</label>
-            <textarea
-              name="content"
-              placeholder="Feedback text detail..."
-              required
-              rows={3}
-              style={{ width: "100%", padding: "8px", borderRadius: "4px", border: "1px solid #ccc" }}
-            />
-          </div>
-
-          <div>
-            <label style={{ display: "block", marginBottom: "4px", fontWeight: "bold" }}>Channel</label>
-            <select name="channel" required style={{ width: "100%", padding: "8px", borderRadius: "4px", border: "1px solid #ccc" }}>
-              <option value="Support Ticket">Support Ticket</option>
-              <option value="App Store">App Store</option>
-              <option value="NPS Survey">NPS Survey</option>
-              <option value="Sales Call">Sales Call</option>
-              <option value="Community">Community</option>
-            </select>
-          </div>
-
-          <div>
-            <label style={{ display: "block", marginBottom: "4px", fontWeight: "bold" }}>Customer Label (Optional)</label>
             <input
               type="text"
-              name="customerLabel"
-              placeholder="e.g. VIP, Churned, Enterprise"
-              style={{ width: "100%", padding: "8px", borderRadius: "4px", border: "1px solid #ccc" }}
+              name="title"
+              placeholder="Title (e.g. Add Dark Mode)"
+              required
+              style={{ padding: "10px 14px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "14px" }}
             />
-          </div>
+            
+            <textarea
+              name="description"
+              placeholder="Detailed description..."
+              required
+              rows={3}
+              style={{ padding: "10px 14px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "14px", fontFamily: "sans-serif" }}
+            />
 
-          <button
-            type="submit"
-            style={{ background: "#0070f3", color: "#fff", border: "none", padding: "10px", borderRadius: "5px", cursor: "pointer", fontWeight: "bold", width: "150px" }}
-          >
-            Submit Feedback
-          </button>
-        </form>
-      </section>
+            <div style={{ display: "flex", gap: "12px" }}>
+              <select
+                name="channel"
+                required
+                style={{ flex: 1, padding: "10px 14px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "14px", backgroundColor: "#fff" }}
+              >
+                <option value="Support Ticket">Support Ticket</option>
+                <option value="App Store">App Store</option>
+                <option value="NPS Survey">NPS Survey</option>
+                <option value="Sales Call">Sales Call</option>
+                <option value="Community">Community</option>
+              </select>
 
-      {/* Day 5: Feedback List */}
-      <section style={{ marginBottom: "30px" }}>
-        <h2>Feedback List</h2>
-        {workspace.feedbacks.length === 0 ? (
-          <p style={{ color: "#777" }}>Abhi tak koi feedback submit nahi hua hai.</p>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            {workspace.feedbacks.map((fb) => (
-              <div key={fb.id} style={{ border: "1px solid #e0e0e0", borderRadius: "8px", padding: "15px", background: "#fff" }}>
-                <p style={{ margin: "0 0 8px 0", fontSize: "16px", fontWeight: "500" }}>{fb.content}</p>
-                <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-                  <span style={{ background: "#e6f7ff", color: "#1890ff", padding: "2px 8px", borderRadius: "4px", fontSize: "12px", border: "1px solid #91d5ff" }}>
-                    📌 {fb.channel}
-                  </span>
-                  {fb.customerLabel && (
-                    <span style={{ background: "#f6ffed", color: "#52c41a", padding: "2px 8px", borderRadius: "4px", fontSize: "12px", border: "1px solid #b7eb8f" }}>
-                      🏷️ {fb.customerLabel}
-                    </span>
-                  )}
-                  <small style={{ color: "#888", marginLeft: "auto" }}>
-                    By {fb.createdBy.name}
-                  </small>
+              <input
+                type="text"
+                name="customerLabel"
+                placeholder="Customer Label (e.g. VIP, Churned)"
+                style={{ flex: 1, padding: "10px 14px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "14px" }}
+              />
+            </div>
+
+            <button
+              type="submit"
+              style={{ backgroundColor: "#2563eb", color: "#fff", border: "none", padding: "10px 16px", borderRadius: "8px", fontWeight: "600", cursor: "pointer", width: "fit-content" }}
+            >
+              Post Feedback
+            </button>
+          </form>
+        </div>
+
+        {/* Feedbacks List */}
+        <div style={{ backgroundColor: "#fff", padding: "24px", borderRadius: "12px", border: "1px solid #e2e8f0", marginBottom: "24px" }}>
+          <h2 style={{ fontSize: "18px", fontWeight: "bold", color: "#0f172a", marginTop: 0, marginBottom: "16px" }}>📋 Feedbacks ({workspace.feedbacks.length})</h2>
+          {workspace.feedbacks.length === 0 ? (
+            <p style={{ color: "#64748b", margin: 0, fontSize: "14px" }}>No feedback submitted yet.</p>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              {workspace.feedbacks.map((fb) => (
+                <div key={fb.id} style={{ padding: "16px", borderRadius: "8px", backgroundColor: "#f8fafc", border: "1px solid #e2e8f0" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "6px" }}>
+                    <h4 style={{ margin: 0, color: "#0f172a", fontSize: "16px" }}>{fb.title}</h4>
+                    <div style={{ display: "flex", gap: "6px" }}>
+                      <span style={{ fontSize: "12px", backgroundColor: "#e0f2fe", color: "#0369a1", padding: "2px 8px", borderRadius: "4px", fontWeight: "500" }}>
+                        {fb.channel}
+                      </span>
+                      {fb.customerLabel && (
+                        <span style={{ fontSize: "12px", backgroundColor: "#fef3c7", color: "#b45309", padding: "2px 8px", borderRadius: "4px", fontWeight: "500" }}>
+                          {fb.customerLabel}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <p style={{ margin: "0 0 10px 0", color: "#334155", fontSize: "14px" }}>{fb.description}</p>
+                  <small style={{ color: "#64748b" }}>Posted by <strong>{fb.user.name}</strong></small>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
+              ))}
+            </div>
+          )}
+        </div>
 
-      {/* Team Members */}
-      <section>
-        <h2>Team Members</h2>
-        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-          {workspace.users.map((user) => (
-            <div key={user.id} style={{ border: "1px solid #ddd", borderRadius: "8px", padding: "12px", background: "#fafafa" }}>
-              <h4 style={{ margin: "0 0 4px 0" }}>
-                {user.name} <span style={{ fontSize: "12px", color: "#0070f3" }}>({user.role})</span>
-              </h4>
-              <p style={{ margin: 0, color: "#555", fontSize: "14px" }}>{user.email}</p>
+        {/* Team Members */}
+        <div style={{ backgroundColor: "#fff", padding: "24px", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
+          <h2 style={{ fontSize: "18px", fontWeight: "bold", color: "#0f172a", marginTop: 0, marginBottom: "16px" }}>👥 Team Members ({workspace.users.length})</h2>
+          {workspace.users.map((u) => (
+            <div key={u.id} style={{ display: "flex", justifyContent: "space-between", padding: "12px", backgroundColor: "#f8fafc", borderRadius: "8px", marginBottom: "8px" }}>
+              <div>
+                <p style={{ margin: 0, fontWeight: "600", color: "#334155" }}>{u.name}</p>
+                <p style={{ margin: 0, fontSize: "12px", color: "#64748b" }}>{u.email}</p>
+              </div>
+              <span style={{ fontSize: "11px", fontWeight: "bold", color: "#475569", border: "1px solid #cbd5e1", padding: "2px 8px", borderRadius: "4px", height: "fit-content" }}>{u.role}</span>
             </div>
           ))}
         </div>
-      </section>
+
+      </div>
     </div>
   );
 }

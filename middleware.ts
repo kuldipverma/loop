@@ -5,7 +5,13 @@ export function middleware(request: NextRequest) {
   const session = request.cookies.get("session")?.value;
   const { pathname } = request.nextUrl;
 
-  if (!session && pathname !== "/signup" && pathname !== "/login") {
+  // Sign in / Sign up route ko allow karo
+  if (pathname === "/signup" || pathname === "/login") {
+    return NextResponse.next();
+  }
+
+  // Session na hone par /signup redirect karo
+  if (!session) {
     return NextResponse.redirect(new URL("/signup", request.url));
   }
 

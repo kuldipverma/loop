@@ -5,8 +5,9 @@ import { getSessionUserId } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
 export async function createFeedbackAction(formData: FormData) {
-  const content = formData.get("content") as string;
-  const channel = formData.get("channel") as string;
+  const title = formData.get("title") as string;
+  const description = formData.get("description") as string;
+  const channel = (formData.get("channel") as string) || "Support Ticket";
   const customerLabel = formData.get("customerLabel") as string;
   const workspaceId = formData.get("workspaceId") as string;
   const slug = formData.get("slug") as string;
@@ -16,11 +17,12 @@ export async function createFeedbackAction(formData: FormData) {
 
   await db.feedback.create({
     data: {
-      content,
+      title,
+      description,
       channel,
-      customerLabel,
+      customerLabel: customerLabel || null,
       workspaceId,
-      createdById: userId,
+      userId,
     },
   });
 

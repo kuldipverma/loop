@@ -8,12 +8,12 @@ datasource db {
 }
 
 model User {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   name        String
-  email       String   @unique
+  email       String    @unique
   password    String
-  role        String   @default("MEMBER")
-  createdAt   DateTime @default(now())
+  role        String    @default("MEMBER")
+  createdAt   DateTime  @default(now())
 
   workspaceId String
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
@@ -22,24 +22,26 @@ model User {
 }
 
 model Workspace {
-  id        String   @id @default(uuid())
+  id        String     @id @default(uuid())
   name      String
-  slug      String   @unique
-  createdAt DateTime @default(now())
+  slug      String     @unique
+  createdAt DateTime   @default(now())
 
   users     User[]
   feedbacks Feedback[]
 }
 
 model Feedback {
-  id          String   @id @default(uuid())
-  title       String
-  description String
-  createdAt   DateTime @default(now())
+  id            String    @id @default(uuid())
+  title         String
+  description   String
+  channel       String    @default("Support Ticket")
+  customerLabel String?
+  createdAt     DateTime  @default(now())
 
-  workspaceId String
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspaceId   String
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  userId      String
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
