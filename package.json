@@ -16,8 +16,10 @@
     "@prisma/client": "^5.22.0",
     "@tailwindcss/postcss": "^4.0.0",
     "bcryptjs": "^3.0.3",
+    "csv-parser": "^3.2.1",
     "jose": "^6.2.12",
     "next": "16.3.4",
+    "papaparse": "^5.7.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "tailwindcss": "^4.0.0"
@@ -25,6 +27,7 @@
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20.0.0",
+    "@types/papaparse": "^5.5.2",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "prisma": "^5.22.0",
