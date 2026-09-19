@@ -37,6 +37,7 @@ model Feedback {
   description   String
   channel       String    @default("Support Ticket")
   customerLabel String?
+  status        String    @default("NEW") // NEW, REVIEWED, ACTIONED
   createdAt     DateTime  @default(now())
 
   workspaceId   String
