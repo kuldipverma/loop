@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
 import SimulatedChannelButtons from "@/components/SimulatedChannelButtons";
+import BatchAnalyzeButton from "@/components/BatchAnalyzeButton";
 
 interface WorkspacePageProps {
   params: Promise<{
@@ -9,9 +10,9 @@ interface WorkspacePageProps {
 }
 
 export default async function WorkspacePage({ params }: WorkspacePageProps) {
-  // Next.js 15+ ke liye params ko await karna zaroori hai
   const { slug } = await params;
 
+  // 1. Workspace fetch
   const workspace = await db.workspace.findFirst({
     where: {
       slug: slug,
@@ -22,6 +23,7 @@ export default async function WorkspacePage({ params }: WorkspacePageProps) {
     notFound();
   }
 
+  // 2. Feedbacks fetch
   const feedbacks = await db.feedback.findMany({
     where: {
       workspaceId: workspace.id,
@@ -53,6 +55,11 @@ export default async function WorkspacePage({ params }: WorkspacePageProps) {
         <SimulatedChannelButtons workspaceId={workspace.id} />
       </div>
 
+      {/* DAY 12: BATCH ANALYZE BUTTON (YEH LINE YAHAN AAYEGI) */}
+      <div className="my-4">
+        <BatchAnalyzeButton workspaceId={workspace.id} slug={slug} />
+      </div>
+
       {/* Feedback List Section */}
       <div className="space-y-4">
         <h2 className="text-xl font-semibold text-slate-800">
@@ -61,7 +68,7 @@ export default async function WorkspacePage({ params }: WorkspacePageProps) {
 
         {feedbacks.length === 0 ? (
           <p className="text-slate-400 text-sm italic">
-            No feedbacks found. Import data using the buttons above.
+            No feedbacks found.
           </p>
         ) : (
           <div className="grid gap-3">
@@ -71,10 +78,24 @@ export default async function WorkspacePage({ params }: WorkspacePageProps) {
                 className="p-4 bg-white rounded-lg border border-slate-200 shadow-sm flex items-start justify-between"
               >
                 <div>
-                  <p className="text-slate-800 font-bold">{item.title}</p>
-                  {item.description && (
-                    <p className="text-slate-600 text-sm mt-1">{item.description}</p>
-                  )}
+                  <p className="text-slate-800 font-medium">{item.content || item.title || item.description}</p>
+                  <div className="flex gap-2 mt-2">
+                    {item.channel && (
+                      <span className="px-2 py-0.5 text-xs bg-slate-100 text-slate-600 rounded font-mono">
+                        {item.channel}
+                      </span>
+                    )}
+                    {item.sentiment && (
+                      <span className="px-2 py-0.5 text-xs bg-emerald-100 text-emerald-700 rounded font-semibold">
+                        {item.sentiment}
+                      </span>
+                    )}
+                    {item.theme && (
+                      <span className="px-2 py-0.5 text-xs bg-indigo-50 text-indigo-600 rounded font-semibold">
+                        {item.theme}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}

@@ -1,53 +1,48 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
 generator client {
   provider = "prisma-client-js"
 }
 
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
-
 model User {
-  id          String    @id @default(uuid())
-  name        String
-  email       String    @unique
-  password    String
-  role        String    @default("MEMBER")
-  createdAt   DateTime  @default(now())
-
-  workspaceId String
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-
+  id          String     @id @default(cuid())
+  name        String?
+  email       String     @unique
+  password    String?
+  role        String     @default("ADMIN")
+  workspaceId String?
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id])
   feedbacks   Feedback[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 }
 
 model Workspace {
-  id        String     @id @default(uuid())
+  id        String     @id @default(cuid())
   name      String
   slug      String     @unique
-  createdAt DateTime   @default(now())
-
   users     User[]
   feedbacks Feedback[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
 }
 
 model Feedback {
-  id            String    @id @default(uuid())
+  id            String    @id @default(cuid())
   title         String
-  description   String
-  channel       String    @default("Support Ticket")
-  customerLabel String?
-  status        String    @default("NEW") // NEW, REVIEWED, ACTIONED
-  createdAt     DateTime  @default(now())
-  
-  // AI Analysis fields (Ye teen line new add hui hain)
+  description   String?
+  channel       String?
   sentiment     String?
   theme         String?
-  aiSummary     String?
-
+  status        String    @default("NEW")
+  customerLabel String?
   workspaceId   String
-  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-
-  userId        String
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace     Workspace @relation(fields: [workspaceId], references: [id])
+  userId        String?
+  user          User?     @relation(fields: [userId], references: [id])
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 }
