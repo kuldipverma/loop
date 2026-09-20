@@ -39,6 +39,11 @@ model Feedback {
   customerLabel String?
   status        String    @default("NEW") // NEW, REVIEWED, ACTIONED
   createdAt     DateTime  @default(now())
+  
+  // AI Analysis fields (Ye teen line new add hui hain)
+  sentiment     String?
+  theme         String?
+  aiSummary     String?
 
   workspaceId   String
   workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
