@@ -1,6 +1,4 @@
-import { getThemeClusters } from "@/app/actions/trends";
-import TrendsClient, { ClusterItem } from "@/components/trends-client";
-import { Layers } from "lucide-react";
+import { getTrendsDataAction } from "@/app/actions/trends";
 
 export default async function TrendsPage({
   params,
@@ -8,63 +6,55 @@ export default async function TrendsPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  let dbClusters = await getThemeClusters(slug);
+  const res = await getTrendsDataAction(slug);
 
-  const clusters: ClusterItem[] = dbClusters && dbClusters.length > 0 ? dbClusters : [
-    {
-      id: "1",
-      name: "Support Ticket",
-      description: "All feedback collected regarding Support Ticket.",
-      sentiment: "Neutral",
-      feedbackCount: 4,
-      feedbacks: [
-        { id: "f1", title: "Login issue", description: "User unable to login", sentiment: "Negative" },
-        { id: "f2", title: "Payment failed", description: "Card charged but order not placed", sentiment: "Negative" },
-        { id: "f3", title: "Slow response time", description: "Support agent took 2 hours to reply", sentiment: "Neutral" },
-        { id: "f4", title: "App crashes on submit", description: "Ticket submission button freezes screen", sentiment: "Negative" },
-      ]
-    },
-    {
-      id: "2",
-      name: "Checkout & Payments",
-      description: "Issues related to checkout flow and card payment failures.",
-      sentiment: "Negative",
-      feedbackCount: 3,
-      feedbacks: [
-        { id: "f5", title: "Payment failed", description: "Card charged but order not placed", sentiment: "Negative" },
-        { id: "f6", title: "UPI Gateway Error", description: "Transaction timeout during payment", sentiment: "Negative" },
-        { id: "f7", title: "Coupon Code Error", description: "Discount code not applying at checkout", sentiment: "Neutral" },
-      ]
-    },
-    {
-      id: "3",
-      name: "UI / UX Feedback",
-      description: "User suggestions regarding application navigation and dashboard look.",
-      sentiment: "Positive",
-      feedbackCount: 5,
-      feedbacks: [
-        { id: "f8", title: "Dashboard looks great", description: "Quick support response and clean UI", sentiment: "Positive" },
-        { id: "f9", title: "Dark Mode Request", description: "Please add dark theme support", sentiment: "Neutral" },
-        { id: "f10", title: "Smooth Animation", description: "Page transitions are smooth", sentiment: "Positive" },
-        { id: "f11", title: "Mobile View Improvement", description: "Sidebar overlaps on mobile screen", sentiment: "Neutral" },
-        { id: "f12", title: "Easy Search Feature", description: "Filtering feeds is very intuitive", sentiment: "Positive" },
-      ]
-    }
-  ];
+  if (!res.success || !res.trends) {
+    return <div className="p-8 text-red-500">Error: {res.error}</div>;
+  }
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-6">
+    <div className="p-8 max-w-6xl mx-auto space-y-6">
       <div>
-        <h1 className="text-3xl font-bold flex items-center gap-2">
-          <Layers className="w-8 h-8 text-primary" />
-          Theme Clusters
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          Grouped feedback by auto-detected themes and intent.
-        </p>
+        <h1 className="text-3xl font-bold">DAY 14 — Trends & Volume Analysis</h1>
+        <p className="text-gray-500">Current Period vs Previous Period comparison and spike detection</p>
       </div>
 
-      <TrendsClient clusters={clusters} />
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {res.trends.map((item) => (
+          <div
+            key={item.theme}
+            className="p-5 border rounded-xl shadow-sm bg-white space-y-3 relative"
+          >
+            {item.isSpike && (
+              <span className="absolute top-3 right-3 bg-red-100 text-red-700 text-xs font-bold px-2.5 py-1 rounded-full border border-red-300">
+                ⚡ SPIKE DETECTED
+              </span>
+            )}
+
+            <h3 className="text-lg font-semibold text-gray-800">{item.theme}</h3>
+
+            <div className="text-sm text-gray-600 space-y-1">
+              <div>Previous Period: <span className="font-semibold">{item.previous}</span></div>
+              <div>Current Period: <span className="font-semibold">{item.current}</span></div>
+            </div>
+
+            <div className="pt-2 border-t flex justify-between items-center">
+              <span className="text-sm text-gray-500">Growth:</span>
+              <span
+                className={`text-base font-bold ${
+                  item.growthPercentage > 0
+                    ? "text-green-600"
+                    : item.growthPercentage < 0
+                    ? "text-red-600"
+                    : "text-gray-600"
+                }`}
+              >
+                {item.growthPercentage > 0 ? `+${item.growthPercentage}%` : `${item.growthPercentage}%`}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

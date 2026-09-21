@@ -2,79 +2,82 @@
 
 import { db } from "@/lib/db";
 
-export interface ThemeCluster {
-  theme: string;
-  description: string;
-  count: number;
-  sentiment: "Positive" | "Neutral" | "Negative";
-  feedbacks: Array<{
-    id: string;
-    title: string;
-    description: string | null;
-    sentiment: string | null;
-    createdAt: Date;
-  }>;
-}
-
-export async function getThemeClusters(workspaceId: string): Promise<ThemeCluster[]> {
+export async function getTrendsDataAction(slug: string) {
   try {
-    const feedbacks = await db.feedback.findMany({
-      where: { workspaceId },
-      orderBy: { createdAt: "desc" },
+    const workspace = await db.workspace.findUnique({
+      where: { slug },
     });
 
-    const themeDescriptions: Record<string, string> = {
-      Onboarding: "Issues and suggestions related to user sign-up and initial workflow.",
-      Billing: "Feedback regarding pricing plans, invoices, and checkout failures.",
-      Performance: "Reports on slow loading times, latency, or application lag.",
-      "Mobile Experience": "User interface and responsiveness complaints on mobile devices.",
-      Dashboard: "Ideas and bugs regarding data visualization and dashboard analytics.",
-      Authentication: "Login, OAuth, and password recovery related feedback.",
-      Export: "Data export, CSV download, and report generation requests.",
-    };
-
-    const clustersMap: Record<string, ThemeCluster> = {};
-
-    for (const item of feedbacks) {
-      const themeName = item.channel || "General";
-
-      if (!clustersMap[themeName]) {
-        clustersMap[themeName] = {
-          theme: themeName,
-          description: themeDescriptions[themeName] || `All feedback collected regarding ${themeName}.`,
-          count: 0,
-          sentiment: "Neutral",
-          feedbacks: [],
-        };
-      }
-
-      clustersMap[themeName].count += 1;
-      clustersMap[themeName].feedbacks.push({
-        id: item.id,
-        title: item.title,
-        description: item.description,
-        sentiment: item.sentiment,
-        createdAt: item.createdAt,
-      });
+    if (!workspace) {
+      return { success: false, error: "Workspace not found" };
     }
 
-    const result = Object.values(clustersMap).map((cluster) => {
-      let pos = 0, neg = 0;
-      cluster.feedbacks.forEach((f) => {
-        if (f.sentiment?.toLowerCase() === "positive") pos++;
-        if (f.sentiment?.toLowerCase() === "negative") neg++;
-      });
+    const now = new Date();
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
 
-      if (pos > neg) cluster.sentiment = "Positive";
-      else if (neg > pos) cluster.sentiment = "Negative";
-      else cluster.sentiment = "Neutral";
-
-      return cluster;
+    // Current Period (Last 7 Days)
+    const currentFeedbacks = await db.feedback.findMany({
+      where: {
+        workspaceId: workspace.id,
+        createdAt: { gte: sevenDaysAgo },
+      },
     });
 
-    return result;
-  } catch (error) {
-    console.error("Error fetching theme clusters:", error);
-    return [];
+    // Previous Period (7-14 Days ago)
+    const previousFeedbacks = await db.feedback.findMany({
+      where: {
+        workspaceId: workspace.id,
+        createdAt: { gte: fourteenDaysAgo, lt: sevenDaysAgo },
+      },
+    });
+
+    // Count theme volume for current period
+    const currentThemeMap: Record<string, number> = {};
+    currentFeedbacks.forEach((f) => {
+      const theme = f.theme || "General";
+      currentThemeMap[theme] = (currentThemeMap[theme] || 0) + 1;
+    });
+
+    // Count theme volume for previous period
+    const previousThemeMap: Record<string, number> = {};
+    previousFeedbacks.forEach((f) => {
+      const theme = f.theme || "General";
+      previousThemeMap[theme] = (previousThemeMap[theme] || 0) + 1;
+    });
+
+    // Combine and calculate growth
+    const allThemes = Array.from(
+      new Set([...Object.keys(currentThemeMap), ...Object.keys(previousThemeMap)])
+    );
+
+    const trends = allThemes.map((theme) => {
+      const current = currentThemeMap[theme] || 0;
+      const previous = previousThemeMap[theme] || 0;
+
+      let growthPercentage = 0;
+      if (previous === 0) {
+        growthPercentage = current > 0 ? 100 : 0;
+      } else {
+        growthPercentage = Math.round(((current - previous) / previous) * 100);
+      }
+
+      const isSpike = growthPercentage >= 50 && current >= 3;
+
+      return {
+        theme,
+        current,
+        previous,
+        growthPercentage,
+        isSpike,
+      };
+    });
+
+    // Sort by highest volume
+    trends.sort((a, b) => b.current - a.current);
+
+    return { success: true, trends };
+  } catch (error: any) {
+    return { success: false, error: error.message };
   }
 }
