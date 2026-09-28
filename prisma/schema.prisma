@@ -90,6 +90,7 @@ model Feedback {
   id          String    @id @default(cuid())
   content     String
   sentiment   String?   @default("NEUTRAL")
+  theme       String?   // <--- Yeh naya theme field add kar diya hai
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   workspaceId String
