@@ -6,16 +6,40 @@ import { revalidatePath } from "next/cache";
 
 const mockData = {
   support_ticket: [
-    { title: "Login issue on Android app", description: "User unable to login via Google OAuth", channel: "Support Ticket" },
-    { title: "Payment failed during checkout", description: "Card charged but order not placed", channel: "Support Ticket" },
+    {
+      title: "Login issue on Android app",
+      description: "User unable to login via Google OAuth",
+      channel: "Support Ticket",
+    },
+    {
+      title: "Payment failed during checkout",
+      description: "Card charged but order not placed",
+      channel: "Support Ticket",
+    },
   ],
   app_review: [
-    { title: "Great application", description: "Smooth UI and fast load times!", channel: "App Review" },
-    { title: "App crashes frequently", description: "Crashes on startup on iOS 17", channel: "App Review" },
+    {
+      title: "Great application",
+      description: "Smooth UI and fast load times!",
+      channel: "App Review",
+    },
+    {
+      title: "App crashes frequently",
+      description: "Crashes on startup on iOS 17",
+      channel: "App Review",
+    },
   ],
   nps_response: [
-    { title: "Score 10/10", description: "Excellent service and quick support response", channel: "NPS Response" },
-    { title: "Score 6/10", description: "Needs improvement in dashboard UI", channel: "NPS Response" },
+    {
+      title: "Score 10/10",
+      description: "Excellent service and quick support response",
+      channel: "NPS Response",
+    },
+    {
+      title: "Score 6/10",
+      description: "Needs improvement in dashboard UI",
+      channel: "NPS Response",
+    },
   ],
 };
 
@@ -32,31 +56,66 @@ export async function importSimulatedData(
     }
 
     if (!userId) {
-      return { success: false, error: "No user found in database." };
+      return {
+        success: false,
+        error: "No user found in database.",
+      };
     }
 
     const itemsToInsert = mockData[channelType];
 
     for (const item of itemsToInsert) {
+      // Find or create the channel for this workspace
+      let channel = await db.channel.findFirst({
+        where: {
+          name: item.channel,
+          workspaceId,
+        },
+      });
+
+      if (!channel) {
+        channel = await db.channel.create({
+          data: {
+            name: item.channel,
+            workspaceId,
+          },
+        });
+      }
+
+      // Create feedback using the current Prisma schema
       await db.feedback.create({
         data: {
-          title: item.title,
-          description: item.description,
-          channel: item.channel,
+          content: `${item.title} - ${item.description}`,
           workspace: {
-            connect: { id: workspaceId },
+            connect: {
+              id: workspaceId,
+            },
           },
-          user: {
-            connect: { id: userId },
+          channel: {
+            connect: {
+              id: channel.id,
+            },
+          },
+          author: {
+            connect: {
+              id: userId,
+            },
           },
         },
       });
     }
 
     revalidatePath("/[slug]", "layout");
-    return { success: true };
+
+    return {
+      success: true,
+    };
   } catch (error: any) {
     console.error("Simulation error:", error);
-    return { success: false, error: error?.message || "Failed to import simulated data" };
+
+    return {
+      success: false,
+      error: error?.message || "Failed to import simulated data",
+    };
   }
 }
