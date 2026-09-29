@@ -1,32 +1,30 @@
-# LOOP - Customer Feedback & Insights Platform
-
-A modern, production-grade Customer Feedback Management and Insights Platform built with Next.js, Prisma, PostgreSQL, and AI-driven grounding.
-
----
+# LOOP
 
 ## Project Overview
-LOOP enables product teams to capture, organize, analyze, and gain actionable insights from customer feedback in real-time. It uses grounded AI to summarize user sentiments with direct evidence references.
-
----
+LOOP is a modern, full-stack web application designed for seamless user interaction, robust data management, and optimized performance. It provides a clean interface and powerful backend capabilities.
 
 ## Features
-- **Workspace Multi-tenancy**: Manage multiple workspaces seamlessly.
-- **Feedback Management**: Create, update, tag, and categorize feedback.
-- **Ask LOOP (RAG Grounding)**: Query your feedback database with natural language and retrieve grounded AI responses with evidence cards.
-- **Voice of Customer Reports**: Automated AI summarization of user trends and themes.
-- **Role-Based Access Control (RBAC)**: Supports Admin, Analyst, and Viewer roles.
-- **Error Handling & Resilience**: Custom 404, 403, loading skeletons, and global error boundaries.
-
----
+- Secure User Authentication and Authorization.
+- Dynamic dashboard with real-time updates.
+- Responsive design optimized for all devices (Tailwind CSS).
+- Database integration with secure ORM management.
 
 ## Tech Stack
-- **Framework**: Next.js (App Router)
-- **Language**: TypeScript
-- **Database**: PostgreSQL (Vercel Postgres / Neon)
-- **ORM**: Prisma ORM
-- **Styling**: Tailwind CSS, Lucide Icons
-- **Deployment**: Vercel
-
----
+- **Frontend:** Next.js, React, Tailwind CSS
+- **Backend/API:** Next.js Server Actions / API Routes
+- **Database & ORM:** PostgreSQL, Prisma ORM
+- **Deployment:** Vercel
 
 ## Architecture
+The application follows a modern monolithic/serverless architecture using Next.js App Router, separating server-side logic, database queries via Prisma, and client-side UI components.
+
+## Database
+- **Database:** PostgreSQL (Hosted on cloud provider like Supabase/Neon)
+- **ORM:** Prisma
+
+## Environment Variables
+Create a `.env` file in the root directory and add the following variables:
+```env
+DATABASE_URL="your_postgresql_database_url"
+NEXTAUTH_SECRET="your_nextauth_secret_key"
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
